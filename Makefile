@@ -1,6 +1,8 @@
 
 OBJS=main.o
-LIBS=-lGLEW -lglfw3
+
+LIBS=-lGLEW -lglfw3 -lGL -lX11 -lpthread -lXrandr -lXi -ldl -lm -lXxf86vm -lXinerama -lXcursor
+FLAGS=-Wall -I.
 
 all: app
 .PHONY: all
@@ -15,8 +17,8 @@ clean:
 .PHONY: clean
 
 app: $(OBJS)
-	gcc $(LIBS) -o $@ $^
+	gcc $(FLAGS) -o $@ $^ $(LIBS)
 
 %.o: %.c
-	gcc -c -o $@ $^
+	gcc $(FLAGS) -c -o $@ $^
 
