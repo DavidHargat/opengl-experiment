@@ -12,6 +12,11 @@
  * glew - 'extention wrangler' (loads opengl function pointers)
  */
 
+// define a callback for key events
+void keypress(GLFWwindow* window, int key, int scancode, int action, int mode){
+	printf("keypress %d %d %d %d\n", key, scancode, action, mode);
+}
+
 int main(int argc, char *argv[]){
 	
 	// Init the window manager
@@ -44,6 +49,8 @@ int main(int argc, char *argv[]){
 		return EXIT_FAILURE;
 	}
 
+	glfwSetKeyCallback(win, &keypress);
+
 	// Specify opengl viewport.
 	glViewport(0, 0, 800, 600);
 
@@ -52,8 +59,10 @@ int main(int argc, char *argv[]){
 
 	// Run until glfw decides to close
 	while(!glfwWindowShouldClose(win)){
-		glClear(GL_COLOR_BUFFER_BIT);
 		glfwPollEvents();
+		
+		glClear(GL_COLOR_BUFFER_BIT);
+		
 		glfwSwapBuffers(win);
 	}
 
