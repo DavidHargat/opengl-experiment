@@ -194,9 +194,9 @@ int main(int argc, char *argv[]){
 		// Load buffer to screen
 		glfwSwapBuffers(win);
 	}
+	
 	// Free our glfw resources.
 	glfwTerminate();
-
 
 	return EXIT_SUCCESS;
 }
