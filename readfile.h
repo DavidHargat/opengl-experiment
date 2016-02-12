@@ -26,8 +26,10 @@ char *readfile(char *filename){
 		if(result==-1) return NULL;
 		
 		buffer = malloc(length);
+		if(buffer) fread(buffer, sizeof(char), length, f);
 		
-		if(buffer) fread(buffer, 1, length, f);
+		// Null byte at end of string.
+		buffer[length-1] = '\0';
 
 		fclose(f);
 	}
