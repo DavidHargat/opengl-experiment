@@ -3,11 +3,12 @@ OBJS=main.o
 
 LIBS=-lGLEW -lglfw3 -lGL -lX11 -lpthread -lXrandr -lXi -ldl -lm -lXxf86vm -lXinerama -lXcursor
 FLAGS=-Wall -I.
+DEPS=readfile.h
 
 all: app
 .PHONY: all
 
-run: app
+run: app $(DEPS)
 	./app
 .PHONY: run
 
