@@ -149,7 +149,7 @@ int main(int argc, char *argv[]){
 	GLuint VAO;
 	GLuint shader_program;
 	
-	win = init_window();
+	win            = init_window();
 	shader_program = load_shaders();
 	
 	// Vertex Data
@@ -165,31 +165,33 @@ int main(int argc, char *argv[]){
 	  glBufferData(GL_ARRAY_BUFFER, sizeof(vertex_data), vertex_data, GL_STATIC_DRAW);
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
 
-
 	// Vertex Array Object for our Vertex Buffer bindings
 	glGenVertexArrays(1, &VAO);  
 
 	glBindVertexArray(VAO);
-	  glBindBuffer(GL_ARRAY_BUFFER, VBO);
-	  glBufferData(GL_ARRAY_BUFFER, sizeof(vertex_data), vertex_data, GL_STATIC_DRAW);
-	  glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(GLfloat), (GLvoid*)0);
-	  glEnableVertexAttribArray(0);
+		glBindBuffer(GL_ARRAY_BUFFER, VBO);
+		glBufferData(GL_ARRAY_BUFFER, sizeof(vertex_data), vertex_data, GL_STATIC_DRAW);
+		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(GLfloat), (GLvoid*)0);
+		glEnableVertexAttribArray(0);
 	glBindVertexArray(0);
-	
 
+	// Use our linked shaders.	
 	glUseProgram(shader_program);
+	
 	// Run until glfw decides to close
 	while(!glfwWindowShouldClose(win)){
 		glfwPollEvents();
 		
-		// Clear screen.
+		// Clear buffer.
 		glClear(GL_COLOR_BUFFER_BIT);
 		glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 		
+		// Set our VAO bindings (get ready to draw), then draw
 		glBindVertexArray(VAO);
-		  glDrawArrays(GL_TRIANGLES, 0, 3);
+		glDrawArrays(GL_TRIANGLES, 0, 3);
 		glBindVertexArray(0);
 
+		// Load buffer to screen
 		glfwSwapBuffers(win);
 	}
 	// Free our glfw resources.
