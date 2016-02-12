@@ -5,7 +5,7 @@
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
 
-//a-frame.io
+#include "readfile.h"
 
 /*
  * glfw - window/input manager
@@ -17,8 +17,90 @@ void keypress(GLFWwindow* window, int key, int scancode, int action, int mode){
 	printf("keypress %d %d %d %d\n\n", key, scancode, action, mode);
 }
 
-int main(int argc, char *argv[]){
+// compile/check a shader
+GLuint load_shader(GLuint type, char *source){
+	GLuint shader;
 	
+	GLint success;
+	GLchar info_log[512];
+
+	// pack source into an array
+	// (opengl likes source files as a list of strings)
+	const GLchar *sources[1];
+	sources[0] = source;
+
+	// init a shader object
+	shader = glCreateShader(type);
+	glShaderSource(shader, 1, sources, NULL);
+	glCompileShader(shader);
+
+	// check that it compiled properly
+	glGetShaderiv(shader, GL_COMPILE_STATUS, &success);
+	if(!success){
+		glGetShaderInfoLog(shader, 512, NULL, info_log);
+    		printf("SHADER COMPILATION_FAILED\n %s\n", info_log);
+		exit(EXIT_FAILURE);
+	}
+	
+	return shader;
+}
+
+// link/check a (shader) program
+GLuint link_program(GLuint *shaders, GLuint length){
+	GLuint i, program;
+	
+	GLint  success;	
+	GLchar info_log[512];
+
+	program = glCreateProgram();
+
+	for( i=0; i<length; i++ )
+      		glAttachShader(program, shaders[i]);
+	
+	glLinkProgram(program);
+	glGetProgramiv(program, GL_LINK_STATUS, &success);
+	
+	if(!success){
+		glGetProgramInfoLog(program, 512, NULL, info_log);
+		printf("PROGRAM LINK_FAILED\n %s\n", info_log);
+		return EXIT_FAILURE;
+	}
+
+	// the individual shaders are no longer needed.
+	for( i=0; i<length; i++ )
+		glDeleteShader(shaders[i]);
+	
+	return program;	
+}
+
+GLuint load_shaders(){
+	// shaders
+	GLuint shader_program, shaders[2],
+	       vertex_shader,  fragment_shader;
+	char   *vertex_source, *fragment_source;
+	
+	// read source files
+	vertex_source   = readfile("vertex.glsl");
+	fragment_source = readfile("fragment.glsl");
+	
+	if(vertex_source==NULL)   printf("[!] could not read 'vertex.glsl'\n");
+	if(fragment_source==NULL) printf("[!] could not read 'fragment.glsl'\n");
+
+	// compile shaders
+	vertex_shader   = load_shader(GL_VERTEX_SHADER, vertex_source);
+	fragment_shader = load_shader(GL_FRAGMENT_SHADER, fragment_source);
+	
+	// pack resulting shaders into an array
+	shaders[0] = vertex_shader;
+	shaders[1] = fragment_shader;
+	
+	// link shaders into program
+	shader_program = link_program(shaders, 2);
+
+	return shader_program;
+}
+
+GLFWwindow *init_window(){
 	// Init the window manager
 	glfwInit();
 	
@@ -36,123 +118,39 @@ int main(int argc, char *argv[]){
 	if(win==NULL){
 		printf("Failed to create GLFW window.\n\n");
 		glfwTerminate();
-		return EXIT_FAILURE;
+		exit(EXIT_FAILURE);
 	}
 	
 	// Bind the window to opengl
 	glfwMakeContextCurrent(win);
 
+	// enable "modern features" of opengl (won't work without this)
 	glewExperimental = GL_TRUE;	
+	
 	// Check that glew initialized.
 	if(glewInit() != GLEW_OK){
 		printf("Failed to init GLEW.\n\n");
 		glfwTerminate();
-		return EXIT_FAILURE;
+		exit(EXIT_FAILURE);
 	}
-
+	
 	glfwSetKeyCallback(win, &keypress);
 
 	// Specify opengl viewport.
 	glViewport(0, 0, 800, 600);
 
+	return win;
+}
 
-	/* 
- 	 * We want to draw a shape, so we need to create 
- 	 * some vertex data for OpenGL.
- 	 *
- 	 * VBO is an ID to refer to our Vertex Buffer Object
-	 * which is instantiated behind the scenes in OpenGL
-	 *
-	 * glGenBuffer  : Generates [n] [buffer] objects in OpenGL.
-	 * glBindBuffer : Binds the [buffer] to the current type target
-	 *                all commands after glBindBuffer will configure
-	 *                said buffer.
-	 * 
-	 * glBufferData : Populates our object with our [vertex_data].
-	 */
-
-	/*
- 	* Now that we have our vertex data, we need to compile
- 	* a 'vertex shader' and a 'fragment shader' so that we
- 	* can render.
- 	*    glCreateShader  : Create the shader in OpenGL.
- 	*    glShaderSource  : Bind our source code to said shader.
- 	*    glCompileShader : Compile the shader.
- 	*/
+int main(int argc, char *argv[]){
 	
-	const GLchar *vertex_shader_source =
-	"                                                                    \n\
-	#version 330 core                                                    \n\
-	layout (location = 0) in vec3 position;                              \n\
-	                                                                     \n\
-	void main(){                                                         \n\
-	 	gl_Position = vec4(position.x, position.y, position.z, 1.0); \n\
-	}                                                                    \n\
-	                                                                     \n\
-	";
-
-	const GLchar *fragment_shader_source =
-	"                                         \n\
-	#version 330 core                         \n\
-                                                  \n\
-	out vec4 color;                           \n\
-                                                  \n\
-	void main()                               \n\
-	{                                         \n\
-	    color = vec4(1.0f, 0.5f, 0.2f, 1.0f); \n\
-	}                                         \n\
-                                                  \n\
-	";
-
-	// Construct our vertex shader
-	GLuint vertex_shader;
-	vertex_shader = glCreateShader(GL_VERTEX_SHADER);
-	glShaderSource(vertex_shader, 1, &vertex_shader_source, NULL);
-	glCompileShader(vertex_shader);
-
-	// For storing result of compilation (if failure)
-	GLint  success;
-	GLchar info_log[512];
-	
-	// Check that the shader compiled properly.
-
-	// Construct our fragment shader
-	GLuint fragment_shader;
-	fragment_shader = glCreateShader(GL_FRAGMENT_SHADER);
-	glShaderSource(fragment_shader, 1, &fragment_shader_source, NULL);
-	glCompileShader(fragment_shader);
-	
- 	// But wait, it gets better, now we have to link our compiled shaders into a 'vertex program'.
-
+	GLFWwindow *win;
+	GLuint VBO;
+	GLuint VAO;
 	GLuint shader_program;
-	shader_program = glCreateProgram();
-	  glAttachShader(shader_program, vertex_shader);
-	  glAttachShader(shader_program, fragment_shader);
-	glLinkProgram(shader_program);
 	
-	// Check that our shaders compiled properly.
-	glGetShaderiv(fragment_shader, GL_COMPILE_STATUS, &success);
-	if(!success){
-		glGetShaderInfoLog(fragment_shader, 512, NULL, info_log);
-    		printf("ERROR::SHADER::FRAGMENT::COMPILATION_FAILED\n %s\n", info_log);
-		return EXIT_FAILURE;
-	}
-	glGetShaderiv(vertex_shader, GL_COMPILE_STATUS, &success);
-	if(!success){
-		glGetShaderInfoLog(vertex_shader, 512, NULL, info_log);
-    		printf("ERROR::SHADER::VERTEX::COMPILATION_FAILED\n %s\n", info_log);
-		return EXIT_FAILURE;
-	}
-	glGetProgramiv(shader_program, GL_LINK_STATUS, &success);
-	if(!success){
-		glGetProgramInfoLog(shader_program, 512, NULL, info_log);
-		printf("ERROR::SHADER::PROGRAM::LINK_FAILED\n %s\n", info_log);
-		return EXIT_FAILURE;
-	}
-	
-	// Don't need out individual shaders anymore
-	glDeleteShader(vertex_shader);
-	glDeleteShader(fragment_shader);
+	win = init_window();
+	shader_program = load_shaders();
 	
 	// Vertex Data
 	GLfloat vertex_data[] = {
@@ -161,15 +159,14 @@ int main(int argc, char *argv[]){
 		+ 0.0f, + 0.5f, + 0.0f
 	};
 	
-	GLuint VBO;
+	// Vertex Buffer Object for our triangle vertices
 	glGenBuffers(1, &VBO);	
 	glBindBuffer(GL_ARRAY_BUFFER, VBO);
 	  glBufferData(GL_ARRAY_BUFFER, sizeof(vertex_data), vertex_data, GL_STATIC_DRAW);
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
 
 
-	// Vertex Arrays
-	GLuint VAO;
+	// Vertex Array Object for our Vertex Buffer bindings
 	glGenVertexArrays(1, &VAO);  
 
 	glBindVertexArray(VAO);
@@ -180,23 +177,24 @@ int main(int argc, char *argv[]){
 	glBindVertexArray(0);
 	
 
+	glUseProgram(shader_program);
 	// Run until glfw decides to close
 	while(!glfwWindowShouldClose(win)){
 		glfwPollEvents();
 		
 		// Clear screen.
 		glClear(GL_COLOR_BUFFER_BIT);
-		glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
+		glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 		
-		glUseProgram(shader_program);
 		glBindVertexArray(VAO);
 		  glDrawArrays(GL_TRIANGLES, 0, 3);
 		glBindVertexArray(0);
 
 		glfwSwapBuffers(win);
 	}
-
 	// Free our glfw resources.
 	glfwTerminate();
+
+
 	return EXIT_SUCCESS;
 }
