@@ -154,25 +154,44 @@ int main(int argc, char *argv[]){
 	
 	// Vertex Data
 	GLfloat vertex_data[] = {
-		- 0.5f, - 0.5f, + 0.0f,
+		// first triangle
+		+ 0.5f, + 0.5f, + 0.0f,
 		+ 0.5f, - 0.5f, + 0.0f,
-		+ 0.0f, + 0.5f, + 0.0f
+		- 0.0f, + 0.5f, + 0.0f,
+		// second triangle
+		+ 0.5f, - 0.5f, + 0.0f,
+		- 0.5f, - 0.5f, + 0.0f,
+		- 0.0f, + 0.5f, + 0.0f
 	};
 	
 	// Vertex Buffer Object for our triangle vertices
 	glGenBuffers(1, &VBO);	
-	glBindBuffer(GL_ARRAY_BUFFER, VBO);
-	  glBufferData(GL_ARRAY_BUFFER, sizeof(vertex_data), vertex_data, GL_STATIC_DRAW);
-	glBindBuffer(GL_ARRAY_BUFFER, 0);
-
+	
 	// Vertex Array Object for our Vertex Buffer bindings
 	glGenVertexArrays(1, &VAO);  
 
+	// VAO's and VBO's are a bit tricky to understand, so this part is heavily commented.
 	glBindVertexArray(VAO);
+		
+		// bind a vertex buffer
 		glBindBuffer(GL_ARRAY_BUFFER, VBO);
+		
+		// put the data in said buffer
 		glBufferData(GL_ARRAY_BUFFER, sizeof(vertex_data), vertex_data, GL_STATIC_DRAW);
-		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(GLfloat), (GLvoid*)0);
+		
+		// describes one 'attribute' (in this case position, 3 floats)
+		glVertexAttribPointer(
+			0,                    // index      : attribute index (first is zero)
+			3,                    // size       : how many 'components' to this attribute (xyz)
+			GL_FLOAT,             // type       : data type (float)
+			GL_FALSE,             // normalized : should the data be normalized? (nope, already is)
+			3 * sizeof(GLfloat),  // stride     : size of this attribute (3 floats)
+			(GLvoid*)0            // pointer    : offset (starts at zero)
+		);
+		
+		// Vertex Attributes are disabled by default. (enable the 'zeroth' attribute we just bound)
 		glEnableVertexAttribArray(0);
+	
 	glBindVertexArray(0);
 
 	// Use our linked shaders.	
@@ -186,9 +205,9 @@ int main(int argc, char *argv[]){
 		glClear(GL_COLOR_BUFFER_BIT);
 		glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 		
-		// Set our VAO bindings (get ready to draw), then draw
+		// Call our VAO bindings (get ready to draw), then draw!
 		glBindVertexArray(VAO);
-		glDrawArrays(GL_TRIANGLES, 0, 3);
+		glDrawArrays(GL_TRIANGLES, 0, 6);
 		glBindVertexArray(0);
 
 		// Load buffer to screen
