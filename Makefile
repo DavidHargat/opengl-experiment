@@ -3,12 +3,12 @@ OBJS=main.o
 
 LIBS=-lGLEW -lglfw3 -lGL -lX11 -lpthread -lXrandr -lXi -ldl -lm -lXxf86vm -lXinerama -lXcursor
 FLAGS=-Wall -I.
-DEPS=readfile.h
+DEPS=readfile.h vertex.glsl fragment.glsl
 
 all: app
 .PHONY: all
 
-run: app $(DEPS)
+run: app 	
 	./app
 .PHONY: run
 
@@ -17,8 +17,8 @@ clean:
 	rm app
 .PHONY: clean
 
-app: $(OBJS)
-	gcc $(FLAGS) -o $@ $^ $(LIBS)
+app: $(OBJS) $(DEPS)
+	gcc $(FLAGS) -o $@ $< $(LIBS)
 
 %.o: %.c
 	gcc $(FLAGS) -c -o $@ $^

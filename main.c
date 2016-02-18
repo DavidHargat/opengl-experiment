@@ -18,7 +18,7 @@ void keypress(GLFWwindow* window, int key, int scancode, int action, int mode){
 }
 
 // compile/check a shader
-GLuint load_shader(GLuint type, char *source){
+GLuint load_shader(GLuint type, char *source, char *name){
 	GLuint shader;
 	
 	GLint success;
@@ -38,7 +38,7 @@ GLuint load_shader(GLuint type, char *source){
 	glGetShaderiv(shader, GL_COMPILE_STATUS, &success);
 	if(!success){
 		glGetShaderInfoLog(shader, 512, NULL, info_log);
-    		printf("SHADER COMPILATION_FAILED\n %s\n", info_log);
+    		printf("SHADER COMPILATION_FAILED '%s'\n%s\n", name, info_log);
 		exit(EXIT_FAILURE);
 	}
 	
@@ -87,8 +87,8 @@ GLuint load_shaders(){
 	if(fragment_source==NULL) printf("[!] could not read 'fragment.glsl'\n");
 
 	// compile shaders
-	vertex_shader   = load_shader(GL_VERTEX_SHADER, vertex_source);
-	fragment_shader = load_shader(GL_FRAGMENT_SHADER, fragment_source);
+	vertex_shader   = load_shader(GL_VERTEX_SHADER, vertex_source, "vertex.glsl");
+	fragment_shader = load_shader(GL_FRAGMENT_SHADER, fragment_source, "fragment.glsl");
 	
 	// pack resulting shaders into an array
 	shaders[0] = vertex_shader;
@@ -158,7 +158,7 @@ int main(int argc, char *argv[]){
 		+ 0.5f, + 0.5f, + 0.0f,
 		+ 0.5f, - 0.5f, + 0.0f,
 		  0.0f, + 0.5f, + 0.0f,
-		- 0.5f, - 0.5f, + 0.0f
+		- 0.5f, - 0.5f, + 0.0f 
 	}; // this makes a neat little trapazoid thingy
 
 	// which vertices to draw (by index)
@@ -184,24 +184,26 @@ int main(int argc, char *argv[]){
 		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
 		glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(index_data), index_data, GL_STATIC_DRAW);
 	
-		// describes one 'attribute' (in this case position, 3 floats)
+		
 		glVertexAttribPointer(
 			0,                    // index      : attribute index (first is zero)
 			3,                    // size       : how many 'components' to this attribute (xyz)
 			GL_FLOAT,             // type       : data type (float)
 			GL_FALSE,             // normalized : should the data be normalized? (nope, already is)
 			3 * sizeof(GLfloat),  // stride     : size of this attribute (3 floats)
-			(GLvoid*)0            // pointer    : offset (starts at zero)
+			(GLvoid*)(0) // pointer    : offset (starts at zero)
 		);
 
 		// Vertex Attributes are disabled by default. (enable the 'zeroth' attribute we just bound)
 		glEnableVertexAttribArray(0);
+		glEnableVertexAttribArray(1);
 	
 	glBindVertexArray(0);
 
-	// Use our linked shaders.	
-	glUseProgram(shader_program);
 	
+	// [wireframe mode]
+	//glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+
 	// Run until glfw decides to close
 	while(!glfwWindowShouldClose(win)){
 		glfwPollEvents();
@@ -210,8 +212,17 @@ int main(int argc, char *argv[]){
 		glClear(GL_COLOR_BUFFER_BIT);
 		glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 		
+		// Use our linked shaders.	
+		glUseProgram(shader_program);
+		
+		// Set vx_color variable.
+		GLint var_color;
+		var_color = glGetUniformLocation(shader_program, "vx_color");
+		glUniform4f(var_color, 1.0f, 0.0f, 1.0f, 1.0f);
+	
 		// Call our VAO bindings (get ready to draw), then draw!
 		glBindVertexArray(VAO);
+		
 		// mode, count, type, indices (offset)
 		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 		glBindVertexArray(0);
