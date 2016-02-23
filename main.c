@@ -18,7 +18,7 @@ void keypress(GLFWwindow* window, int key, int scancode, int action, int mode){
 }
 
 // compile/check a shader
-GLuint load_shader(GLuint type, char *source, char *name){
+GLuint compile_shader(GLuint type, char *source, char *name){
 	GLuint shader;
 	
 	GLint success;
@@ -73,31 +73,44 @@ GLuint link_program(GLuint *shaders, GLuint length){
 	return program;	
 }
 
-GLuint load_shaders(){
-	// shaders
-	GLuint shader_program, shaders[2],
-	       vertex_shader,  fragment_shader;
-	char   *vertex_source, *fragment_source;
-	
-	// read source files
-	vertex_source   = readfile("vertex.glsl");
-	fragment_source = readfile("fragment.glsl");
-	
-	if(vertex_source==NULL)   printf("[!] could not read 'vertex.glsl'\n");
-	if(fragment_source==NULL) printf("[!] could not read 'fragment.glsl'\n");
 
-	// compile shaders
-	vertex_shader   = load_shader(GL_VERTEX_SHADER, vertex_source, "vertex.glsl");
-	fragment_shader = load_shader(GL_FRAGMENT_SHADER, fragment_source, "fragment.glsl");
-	
-	// pack resulting shaders into an array
-	shaders[0] = vertex_shader;
-	shaders[1] = fragment_shader;
-	
-	// link shaders into program
-	shader_program = link_program(shaders, 2);
+GLuint load_program(char **filenames, GLint *types, size_t len){
+	GLuint program, *shaders;
+	size_t i;
 
-	return shader_program;
+	shaders = malloc(sizeof(GLuint) * len); // allocate space for shaders
+
+	for(i=0; i<len; i++){
+		char *src = readfile(filenames[i]);
+		
+		if(src==NULL) 
+		printf("[!] Could not read shader file '%s'\n", filenames[i]);
+		
+		shaders[i] = compile_shader(types[i], src, filenames[i]);
+
+		free(src);
+	}
+
+	program = link_program(shaders, len);
+
+	free(shaders);
+
+	return program;
+}
+
+GLuint init_program(){
+
+	char *filenames[2] = {
+		"vertex.glsl", 
+		"fragment.glsl"
+	};
+
+	GLint types[2] = {
+		GL_VERTEX_SHADER, 
+		GL_FRAGMENT_SHADER
+	};
+	
+	return load_program(filenames, types, 2);
 }
 
 GLFWwindow *init_window(){
@@ -150,7 +163,7 @@ int main(int argc, char *argv[]){
 	GLuint shader_program;
 	
 	win            = init_window();
-	shader_program = load_shaders();
+	shader_program = init_program();
 	
 	// define some vertices
 	GLfloat vertex_data[] = {
@@ -184,7 +197,6 @@ int main(int argc, char *argv[]){
 		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
 		glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(index_data), index_data, GL_STATIC_DRAW);
 	
-		
 		glVertexAttribPointer(
 			0,                    // index      : attribute index (first is zero)
 			3,                    // size       : how many 'components' to this attribute (xyz)
@@ -218,7 +230,7 @@ int main(int argc, char *argv[]){
 		// Set vx_color variable.
 		GLint var_color;
 		var_color = glGetUniformLocation(shader_program, "vx_color");
-		glUniform4f(var_color, 1.0f, 0.0f, 1.0f, 1.0f);
+		glUniform4f(var_color, 0.0f, 0.0f, 1.0f, 1.0f);
 	
 		// Call our VAO bindings (get ready to draw), then draw!
 		glBindVertexArray(VAO);
