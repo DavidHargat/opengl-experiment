@@ -4,9 +4,11 @@
 #define GLEW_STATIC
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
+#include <SOIL.h>
 
 #include "readfile.h"
 #include "dlib.h"
+
 
 /*
  * glfw - window/input manager
@@ -44,14 +46,34 @@ int main(int argc, char *argv[]){
 	shader_program = init_program();
 	
 	glfwSetKeyCallback(win, &keypress);
+
+	// Load image to RAM
+	int width=0, height=0;
+	unsigned char *image;
+	
+	image = SOIL_load_image("noise.png", &width, &height, 0, SOIL_LOAD_RGB);
+
+	// Generate a texture
+	GLuint texture;
+	glGenTextures(1, &texture);
+
+	// Load image to GPU
+	glBindTexture(GL_TEXTURE_2D, texture);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, image);
+		glGenerateMipmap(GL_TEXTURE_2D);
+	glBindTexture(GL_TEXTURE_2D, 0);
+
+	// Free image from RAM
+	SOIL_free_image_data(image);
 	
 	// define some vertices
 	GLfloat vertex_data[] = {
 		// triangles share faces now
-		+ 0.5f, + 0.5f, + 0.0f,
-		+ 0.5f, - 0.5f, + 0.0f,
-		  0.0f, + 0.5f, + 0.0f,
-		- 0.5f, - 0.5f, + 0.0f 
+		// Vx Position            Color               Tex Coords
+		+ 0.5f, + 0.5f, + 0.0f,   1.0f, 0.0f, 0.0f,   0.0f, 0.0f,
+		+ 0.5f, - 0.5f, + 0.0f,   0.0f, 1.0f, 0.0f,   1.0f, 0.0f,
+		+ 0.0f, + 0.5f, + 0.0f,   0.0f, 0.0f, 1.0f,   0.0f, 1.0f,
+		- 0.5f, - 0.5f, + 0.0f,   0.0f, 0.5f, 1.0f,   1.0f, 1.0f
 	}; // this makes a neat little trapazoid thingy
 
 	// which vertices to draw (by index)
@@ -76,19 +98,41 @@ int main(int argc, char *argv[]){
 		
 		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
 		glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(index_data), index_data, GL_STATIC_DRAW);
-	
+
+		// position
 		glVertexAttribPointer(
 			0,                    // index      : attribute index (first is zero)
 			3,                    // size       : how many 'components' to this attribute (xyz)
 			GL_FLOAT,             // type       : data type (float)
 			GL_FALSE,             // normalized : should the data be normalized? (nope, already is)
-			3 * sizeof(GLfloat),  // stride     : size of this attribute (3 floats)
-			(GLvoid*)(0) // pointer    : offset (starts at zero)
+			8 * sizeof(GLfloat),  // stride     : generally the total size of a vertex
+			(GLvoid*)(0)
 		);
-
+		
+		// color
+		glVertexAttribPointer(
+			1,
+			3,
+			GL_FLOAT,
+			GL_FALSE,
+			8 * sizeof(GLfloat),
+			(GLvoid*)(3 * sizeof(GLfloat))
+		);
+		
+		// tex coords
+		glVertexAttribPointer(
+			2,
+			2,
+			GL_FLOAT,
+			GL_FALSE,
+			8 * sizeof(GLfloat),
+			(GLvoid*)(6 * sizeof(GLfloat))
+		);
+		
 		// Vertex Attributes are disabled by default. (enable the 'zeroth' attribute we just bound)
 		glEnableVertexAttribArray(0);
 		glEnableVertexAttribArray(1);
+		glEnableVertexAttribArray(2);
 	
 	glBindVertexArray(0);
 
@@ -108,10 +152,12 @@ int main(int argc, char *argv[]){
 		glUseProgram(shader_program);
 		
 		// Set vx_color variable.
-		GLint var_color;
-		var_color = glGetUniformLocation(shader_program, "vx_color");
-		glUniform4f(var_color, 0.0f, 0.0f, 1.0f, 1.0f);
-	
+		//GLint var_color;
+		//var_color = glGetUniformLocation(shader_program, "vx_color");
+		//glUniform4f(var_color, 0.0f, 0.0f, 1.0f, 1.0f);
+		
+		glBindTexture(GL_TEXTURE_2D, texture);
+		
 		// Call our VAO bindings (get ready to draw), then draw!
 		glBindVertexArray(VAO);
 		
