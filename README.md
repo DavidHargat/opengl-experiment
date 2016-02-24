@@ -10,3 +10,6 @@ Check out [learn opengl](http://learnopengl.com/).
 
 [glew](http://glew.sourceforge.net/)
 
+[soil](http://lonesock.net/soil.html)
+
+[soil github](https://github.com/kbranigan/Simple-OpenGL-Image-Library)

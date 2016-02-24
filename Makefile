@@ -1,9 +1,9 @@
 
 OBJS=main.o
 
-LIBS=-lGLEW -lglfw3 -lGL -lX11 -lpthread -lXrandr -lXi -ldl -lm -lXxf86vm -lXinerama -lXcursor
+LIBS=-lGLEW -lglfw3 -lGL -lX11 -lpthread -lXrandr -lXi -ldl -lm -lXxf86vm -lXinerama -lXcursor -lSOIL
 FLAGS=-Wall -I.
-DEPS=readfile.h vertex.glsl fragment.glsl
+DEPS=readfile.h vertex.glsl fragment.glsl dlib.h
 
 all: app
 .PHONY: all
