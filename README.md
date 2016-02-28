@@ -7,8 +7,14 @@ Check out [learn opengl](http://learnopengl.com/).
 # build / run
 
 `make matrix` - download the latest version of `matrix.h`
+
+
 `make`        - build the project
+
+
 `make run`    - build / run 
+
+
 
 # Dependencies
 
