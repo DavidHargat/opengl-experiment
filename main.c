@@ -7,8 +7,8 @@
 #include <SOIL.h>
 
 #include "readfile.h"
+#include "matrix.h"
 #include "dlib.h"
-
 
 /*
  * glfw - window/input manager
@@ -73,7 +73,7 @@ int main(int argc, char *argv[]){
 		+ 0.5f, + 0.5f, + 0.0f,   1.0f, 0.0f, 0.0f,   0.0f, 0.0f,
 		+ 0.5f, - 0.5f, + 0.0f,   0.0f, 1.0f, 0.0f,   1.0f, 0.0f,
 		+ 0.0f, + 0.5f, + 0.0f,   0.0f, 0.0f, 1.0f,   0.0f, 1.0f,
-		- 0.5f, - 0.5f, + 0.0f,   0.0f, 0.5f, 1.0f,   1.0f, 1.0f
+		+ 0.0f, - 0.5f, + 0.0f,   0.0f, 0.5f, 1.0f,   1.0f, 1.0f
 	}; // this makes a neat little trapazoid thingy
 
 	// which vertices to draw (by index)
@@ -101,11 +101,11 @@ int main(int argc, char *argv[]){
 
 		// position
 		glVertexAttribPointer(
-			0,                    // index      : attribute index (first is zero)
-			3,                    // size       : how many 'components' to this attribute (xyz)
-			GL_FLOAT,             // type       : data type (float)
-			GL_FALSE,             // normalized : should the data be normalized? (nope, already is)
-			8 * sizeof(GLfloat),  // stride     : generally the total size of a vertex
+			0,                   // index      : attribute index (first is zero)
+			3,                   // size       : how many 'components' to this attribute (xyz)
+			GL_FLOAT,            // type       : data type (float)
+			GL_FALSE,            // normalized : should the data be normalized? (nope, already is)
+			8 * sizeof(GLfloat), // stride     : generally the total size of a vertex
 			(GLvoid*)(0)
 		);
 		
@@ -140,21 +140,30 @@ int main(int argc, char *argv[]){
 	// [wireframe mode]
 	//glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 
+	matrix *t;
+
 	// Run until glfw decides to close
 	while(!glfwWindowShouldClose(win)){
+
+		float time = (float)(glfwGetTime() * 10);
+		t = matrix_rotate_z(time);
+		
+		printf("%f\n", time);
+		matrix_print(t, 5, 1);
+
 		glfwPollEvents();
 		
 		// Clear buffer.
 		glClear(GL_COLOR_BUFFER_BIT);
-		glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+		glClearColor(0.2f, 0.2f, 0.2f, 1.0f);
 		
 		// Use our linked shaders.	
 		glUseProgram(shader_program);
 		
 		// Set vx_color variable.
-		//GLint var_color;
-		//var_color = glGetUniformLocation(shader_program, "vx_color");
-		//glUniform4f(var_color, 0.0f, 0.0f, 1.0f, 1.0f);
+		GLint var_transform;
+		var_transform = glGetUniformLocation(shader_program, "transform");
+		glUniformMatrix4fv(var_transform, 1, GL_TRUE, t->data);
 		
 		glBindTexture(GL_TEXTURE_2D, texture);
 		

@@ -12,6 +12,10 @@ run: app
 	./app
 .PHONY: run
 
+matrix:
+	echo "updating matrix library"
+	curl -s "https://raw.githubusercontent.com/DavidHargat/matrix-fun/master/matrix.h" -o matrix.h
+
 clean:
 	rm *.o
 	rm app
