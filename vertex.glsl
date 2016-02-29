@@ -14,6 +14,6 @@ out vec2 frag_texcord;
 
 void main(){
 	gl_Position  = transform * vec4(position.x, position.y, position.z, 1.0);
-	frag_color   = vec4(color.xyz, 1.0);
+	frag_color   = transform * vec4(1.0, 1.0, 1.0, 1.0);
 	frag_texcord = tex;
 }

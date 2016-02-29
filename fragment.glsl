@@ -12,6 +12,6 @@ uniform sampler2D tex_data;
 void main(){
 
 	//color = frag_color;
-	color = vec4(1.0, 1.0, 1.0, 1.0);
-	//color = texture(tex_data, frag_texcord);
+	//color = vec4(1.0, 1.0, 1.0, 1.0);
+	color = texture(tex_data, frag_texcord);
 }
