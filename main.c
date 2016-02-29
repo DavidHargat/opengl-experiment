@@ -70,10 +70,10 @@ int main(int argc, char *argv[]){
 	GLfloat vertex_data[] = {
 		// triangles share faces now
 		// Vx Position            Color               Tex Coords
-		+ 0.5f, + 0.5f, + 0.0f,   1.0f, 0.0f, 0.0f,   0.0f, 0.0f,
-		+ 0.5f, - 0.5f, + 0.0f,   0.0f, 1.0f, 0.0f,   1.0f, 0.0f,
-		+ 0.0f, + 0.5f, + 0.0f,   0.0f, 0.0f, 1.0f,   0.0f, 1.0f,
-		+ 0.0f, - 0.5f, + 0.0f,   0.0f, 0.5f, 1.0f,   1.0f, 1.0f
+		0.0f, 0.5f, 0.0f,   1.0f, 0.0f, 0.0f,   0.0f, 1.0f,
+		0.5f, 0.5f, 0.0f,   0.0f, 1.0f, 0.0f,   1.0f, 1.0f,
+		0.0f, 0.0f, 0.0f,   0.0f, 0.0f, 1.0f,   1.0f, 0.0f,
+		0.5f, 0.0f, 0.0f,   0.0f, 0.5f, 1.0f,   0.0f, 0.0f
 	}; // this makes a neat little trapazoid thingy
 
 	// which vertices to draw (by index)
@@ -138,18 +138,27 @@ int main(int argc, char *argv[]){
 
 	
 	// [wireframe mode]
-	//glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+	glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 
-	matrix *t;
+	matrix *transform, *translate, *rotate;
+
+	translate = matrix_create(4,4);
+
+	matrix_copy(translate, (float[]){
+		1.0f, 0.0f, 0.0f,-0.25f,	
+		0.0f, 1.0f, 0.0f,-0.25f,	
+		0.0f, 0.0f, 1.0f, 0.0f,	
+		0.0f, 0.0f, 0.0f, 1.0f,	
+	});
+
 
 	// Run until glfw decides to close
 	while(!glfwWindowShouldClose(win)){
 
-		float time = (float)(glfwGetTime() * 10);
-		t = matrix_rotate_z(time);
+		float time = (float)(glfwGetTime() * 100);
 		
-		printf("%f\n", time);
-		matrix_print(t, 5, 1);
+		rotate    = matrix_rotate_z(time);
+		transform = matrix_multiply(rotate, translate);
 
 		glfwPollEvents();
 		
@@ -163,7 +172,7 @@ int main(int argc, char *argv[]){
 		// Set vx_color variable.
 		GLint var_transform;
 		var_transform = glGetUniformLocation(shader_program, "transform");
-		glUniformMatrix4fv(var_transform, 1, GL_TRUE, t->data);
+		glUniformMatrix4fv(var_transform, 1, GL_TRUE, transform->data);
 		
 		glBindTexture(GL_TEXTURE_2D, texture);
 		
