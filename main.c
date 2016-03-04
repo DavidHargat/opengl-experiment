@@ -88,22 +88,35 @@ GLuint init_shape(){
 
 void draw_rect(float x, float y, float angle){
 	
-	matrix *transform, *translate, *rotate;
+	matrix *scale, *transform, *translate, *rotate;
 	GLuint var;
 
-	translate = matrix_create(4, 4);
-
-	matrix_copy(translate, (float[]){
-		0.5f, 0.0f, 0.0f,    x,	
-		0.0f, 0.5f, 0.0f,    y,	
-		0.0f, 0.0f, 0.5f, 0.0f,	
+	
+	scale     = matrix_create(4, 4);
+	float s = 1.0f;
+	matrix_copy(scale, (float[]){
+		   s, 0.0f, 0.0f, 0.0f,	
+		0.0f,    s, 0.0f, 0.0f,	
+		0.0f, 0.0f,    s, 0.0f,	
 		0.0f, 0.0f, 0.0f, 1.0f,	
 	});
 
-	rotate    = matrix_rotate_z(angle);
-	transform = matrix_multiply(translate, rotate);
+	transform = matrix_create(4, 4);
+	matrix_copy(transform, (float[]){
+		1.0f, 0.0f, 0.0f, 0.0f,	
+		0.0f, 1.0f, 0.0f, 0.0f,	
+		0.0f, 0.0f, 1.0f, 0.0f,	
+		0.0f, 0.0f,-1.0f, 1.0f,	
+	});
 
+	//transform = transform;
+	rotate = matrix_rotate_x(angle);
+	
 	glUseProgram(PROGRAM);
+
+	var = glGetUniformLocation(PROGRAM, "rotate");
+	glUniformMatrix4fv(var, 1, GL_TRUE, rotate->data);
+	
 	var = glGetUniformLocation(PROGRAM, "transform");
 	glUniformMatrix4fv(var, 1, GL_TRUE, transform->data);
 	
@@ -143,7 +156,6 @@ int main(int argc, char *argv[]){
 	// Free image from RAM
 	SOIL_free_image_data(image);
 	
-	
 	// [wireframe mode]
 	//glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 
@@ -161,8 +173,7 @@ int main(int argc, char *argv[]){
 		glClearColor(0.2f, 0.2f, 0.2f, 1.0f);
 		
 		glBindTexture(GL_TEXTURE_2D, texture);
-		draw_rect(0, 0, time);
-		draw_rect(+0.5f, 0, time);
+		draw_rect(0, 0, -time);
 
 		// Load buffer to screen
 		glfwSwapBuffers(win);
