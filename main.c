@@ -7,7 +7,7 @@
 #include <SOIL.h>
 
 #include "readfile.h"
-#include "matrix.h"
+#include "smatrix.h"
 #include "dlib.h"
 
 /*
@@ -88,37 +88,40 @@ GLuint init_shape(){
 
 void draw_rect(float x, float y, float angle){
 	
-	matrix *scale, *transform, *translate, *rotate;
+	matrix scale, transform, translate, rotate;
 	GLuint var;
-
-	
-	scale     = matrix_create(4, 4);
 	float s = 1.0f;
-	matrix_copy(scale, (float[]){
+	
+	matrix_salloc(transform, 4, 4);
+	matrix_salloc(translate, 4, 4);
+	matrix_salloc(rotate,    4, 4);
+	matrix_salloc(scale,     4, 4);
+
+	scale.data = (float[]){
 		   s, 0.0f, 0.0f, 0.0f,	
 		0.0f,    s, 0.0f, 0.0f,	
 		0.0f, 0.0f,    s, 0.0f,	
 		0.0f, 0.0f, 0.0f, 1.0f,	
-	});
+	};
 
-	transform = matrix_create(4, 4);
-	matrix_copy(transform, (float[]){
+	transform.data = (float[]){
 		1.0f, 0.0f, 0.0f, 0.0f,	
 		0.0f, 1.0f, 0.0f, 0.0f,	
 		0.0f, 0.0f, 1.0f, 0.0f,	
-		0.0f, 0.0f,-1.0f, 1.0f,	
-	});
+		0.0f, 0.0f, 1.0f, 1.0f,	
+	};
 
 	//transform = transform;
-	rotate = matrix_rotate_x(angle);
-	
+	matrix_rotate_x(&rotate, angle);
+	matrix_multiply(&rotate, &transform, &rotate);
+
 	glUseProgram(PROGRAM);
 
 	var = glGetUniformLocation(PROGRAM, "rotate");
-	glUniformMatrix4fv(var, 1, GL_TRUE, rotate->data);
+	glUniformMatrix4fv(var, 1, GL_TRUE, rotate.data);
 	
 	var = glGetUniformLocation(PROGRAM, "transform");
-	glUniformMatrix4fv(var, 1, GL_TRUE, transform->data);
+	glUniformMatrix4fv(var, 1, GL_TRUE, transform.data);
 	
 	// Call our VAO bindings (get ready to draw), then draw!
 	glBindVertexArray(VAO_RECT);
