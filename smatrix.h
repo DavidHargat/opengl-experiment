@@ -39,6 +39,15 @@ void matrix_copy(matrix *dest, float *src){
 	memcpy(dest->data, src, sizeof(float) * (dest->width) * (dest->height));
 }
 
+void matrix_identity(matrix *dest){
+	matrix_copy(dest, (float[]){
+		1.0f, 0.0f, 0.0f, 0.0f,
+		0.0f, 1.0f, 0.0f, 0.0f,	
+		0.0f, 0.0f, 1.0f, 0.0f,	
+		0.0f, 0.0f, 0.0f, 1.0f	
+	});
+}
+
 void matrix_scale(matrix *dest, float x, float y, float z){
 	matrix_copy(dest, (float[]){
 		   x, 0.0f, 0.0f, 0.0f,
@@ -56,7 +65,6 @@ void matrix_translate(matrix *dest, float x, float y, float z){
 		0.0f, 0.0f, 0.0f, 1.0f	
 	});
 }
-
 
 void matrix_perspective(
 	matrix *dest, 
@@ -158,6 +166,9 @@ void matrix_rotate_z(matrix *dest, float angle){
 void matrix_multiply(matrix *dest, matrix *a, matrix *b){
 	size_t x, i, j;
 
+	matrix tmp;
+	matrix_salloc(tmp, 4, 4);
+
 	// The size of the ROWS in matrix A
 	// must be the same as the size of the
 	// COLUMNS in matrix B.
@@ -171,9 +182,11 @@ void matrix_multiply(matrix *dest, matrix *a, matrix *b){
 		for(x=0; x < a->width;  x++)
 			temp += matrix_get(a, x, i) * matrix_get(b, j, x);
 
-		matrix_set(dest, j, i, temp);
+		matrix_set(&tmp, j, i, temp);
 	}
 	}
+
+	matrix_copy(dest, tmp.data);
 }
 
 void matrix_print(matrix *m, int spacing, int precision){

@@ -7,6 +7,7 @@
 
 #include "smatrix.h"
 #include "dlib.h"
+#include "model.h"
 
 /*
  * glfw - window/input manager
@@ -19,69 +20,73 @@ void keypress(GLFWwindow* window, int key, int scancode, int action, int mode){
 }
 
 GLuint init_shape(){
-	GLuint VAO, VBO, EBO;
+	GLuint VAO, VBO;
 	
 	// define some vertices
 	GLfloat vertex_data[] = {
-		// Position             Color               Tex Coords
-		-0.25f,  0.25f, 0.0f,   1.0f, 0.0f, 0.0f,   0.0f, 1.0f,
-		 0.25f,  0.25f, 0.0f,   0.0f, 1.0f, 0.0f,   1.0f, 1.0f,
-		-0.25f, -0.25f, 0.0f,   0.0f, 0.0f, 1.0f,   0.0f, 0.0f,
-		 0.25f, -0.25f, 0.0f,   0.0f, 0.5f, 1.0f,   1.0f, 0.0f
-	};
-
-	// which vertices to draw (by index)
-	GLuint index_data[] = {
-		0,1,2, // first triangle
-		1,2,3  // second triangle 
+		// Position             Tex Coords
+		-0.25f,  0.25f, 0.0f,   0.0f, 1.0f,
+		 0.25f,  0.25f, 0.0f,   1.0f, 1.0f,
+		-0.25f, -0.25f, 0.0f,   0.0f, 0.0f,
+		 0.25f, -0.25f, 0.0f,   1.0f, 0.0f
 	};
 
 	// Vertex Buffer Object for our triangle vertices
 	glGenBuffers(1, &VBO);
-	glGenBuffers(1, &EBO);
 	
 	// Vertex Array Object for our Vertex Buffer bindings
 	glGenVertexArrays(1, &VAO);
 
 	glBindVertexArray(VAO);
 	
-	glBindBuffer(GL_ARRAY_BUFFER, VBO);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(vertex_data), vertex_data, GL_STATIC_DRAW);
+			glEnable(GL_DEPTH_TEST);
+			
+			glBindBuffer(GL_ARRAY_BUFFER, VBO);
+			glBufferData(GL_ARRAY_BUFFER, sizeof(model_cube), model_cube, GL_STATIC_DRAW);
 
-	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
-	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(index_data), index_data, GL_STATIC_DRAW);
-	
-	// position, color, tex
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(GLfloat), (GLvoid*)(0));
-	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(GLfloat), (GLvoid*)(3*sizeof(GLfloat)));
-	glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(GLfloat), (GLvoid*)(6*sizeof(GLfloat)));
-	
-	// Vertex Attributes are disabled by default. (enable the 'zeroth' attribute we just bound)
-	glEnableVertexAttribArray(0);
-	glEnableVertexAttribArray(1);
-	glEnableVertexAttribArray(2);	
-	
+			// position, tex
+			glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(GLfloat), (GLvoid*)(0));
+			glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(GLfloat), (GLvoid*)(3*sizeof(GLfloat)));
+			
+			// Vertex Attributes are disabled by default. (enable the 'zeroth' attribute we just bound)
+			glEnableVertexAttribArray(0);
+			glEnableVertexAttribArray(1);
+			
 	glBindVertexArray(0);
 
 	return VAO;
 }
 
-void transform(GLuint program, float time){
-	matrix rotate, translate, scale, perspective;
+void transform(GLuint program, 
+float tx, float ty, float tz,
+float rx, float ry, float rz
+){
+	matrix rotate, translate, scale, perspective, temp;
 	GLuint var;
 
 	// allocate stack memory for matrices
+	matrix_salloc(temp, 4, 4);
 	matrix_salloc(scale, 4, 4);
 	matrix_salloc(rotate, 4, 4);
 	matrix_salloc(translate, 4, 4);
 	matrix_salloc(perspective, 4, 4);
 
 	// calculate
-	matrix_rotate_x(&rotate, time);
-	matrix_scale(&scale, 4.0f, 4.0f, 1.0f);
-	matrix_translate(&translate, 0.0f, 0.0f, -1.0f + cosf(time/100));
-	//matrix_orthographic(&perspective, 4.0f, 4.0f, 0.1f, 4.0f); // width, height, near far
-	matrix_perspective(&perspective, 45.0f, 90.0f, 0.1f, 4.0f); // fovx, fovy, near far
+	matrix_identity(&rotate);
+	
+	matrix_rotate_x(&temp, rx); 
+	matrix_multiply(&rotate, &temp, &rotate);
+	
+	matrix_rotate_y(&temp, ry);
+	matrix_multiply(&rotate, &temp, &rotate);
+	
+	matrix_rotate_z(&temp, rz); 
+	matrix_multiply(&rotate, &temp, &rotate);
+
+	matrix_scale(&scale, 1.0f, 1.0f, 1.0f);
+	matrix_translate(&translate, tx, ty, tz);
+	//matrix_orthographic(&perspective, 8.0f, 8.0f, 0.1f, 4.0f); // width, height, near far
+	matrix_perspective(&perspective, 90.0f, 90.0f, 0.1f, 4.0f); // fovx, fovy, near far
 
 	// send matrices tp GPU
 	var = glGetUniformLocation(program, "rotate");
@@ -108,17 +113,17 @@ int main(int argc, char *argv[]){
 	dlib_compile();
 
 	// Generate a texture
-	GLuint texture = dlib_load_texture("noise.png");
+	GLuint texture = dlib_load_texture("crate.jpg");
 
 	// [wireframe mode]
 	//glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 
 	GLuint VAO_RECT = init_shape();
 
-	glEnable(GL_DEPTH_TEST);
 	
 	GLuint program;
 	program = DLIB_PROGRAM;
+
 
 	float time;
 	while(!glfwWindowShouldClose(window)){
@@ -130,12 +135,31 @@ int main(int argc, char *argv[]){
 		glBindTexture(GL_TEXTURE_2D, texture);
 		glUseProgram(program);
 
-		transform(program, time);		
-		
 		glBindVertexArray(VAO_RECT);
-		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
-		glBindVertexArray(0);
 		
+		transform(program,
+			-1.0f, 0.0f, -3.0f + cosf(time/100),
+			time/2.0f, time, 0.0f
+		);
+		
+		glDrawArrays(GL_TRIANGLES, 0, 36);
+	
+		transform(program,
+			1.0f, 0.0f, -1.0f,
+			time/10.0f, time, 0.0f
+		);
+		
+		glDrawArrays(GL_TRIANGLES, 0, 36);
+	
+		/*
+		transform(program,
+			0.0f, -0.25f, 0.0f,
+			0.0f, time, 0.0f
+		);
+		glDrawArrays(GL_TRIANGLES, 0, 36);
+		*/
+
+		glBindVertexArray(0);
 		glfwSwapBuffers(window);
 	}
 	
