@@ -6,16 +6,24 @@
 #include <string.h>
 #include <math.h>
 
-// Allocate a matrix on the stack.
-#define matrix_salloc(dest, w, h) \
-dest.width  = w;                  \
-dest.height = h;                  \
-dest.data   = (float[(w*h)]){};   \
+/*
+ * Float matrix math library.
+ * 
+ * Important features:
+ * - COLUMN major format
+ * - accepts angles as DEGREES
+ * - matrix_rotate normalizes the arbitrary rotation axis (x, y, z) 
+ * - matrices are 4x4
+*/
+
+// all matrices store enough floats for a 4x4
+// (don't change this)
+#define MATRIX_SIZE 16
+#define MATRIX_WIDTH 4
+#define MATRIX_HEIGHT 4
 
 typedef struct{
-	size_t width;
-	size_t height;
-	float *data;
+	float data[MATRIX_SIZE];
 } matrix;
 
 float radians_to_degrees(float radians){
@@ -28,15 +36,15 @@ float degrees_to_radians(float degrees){
 
 // Translates 2D coordinates to 1D index.
 float matrix_get(matrix *m, size_t x, size_t y){
-	return m->data[(m->width*y)+x];
+	return m->data[(MATRIX_WIDTH*y)+x];
 }
 
 void matrix_set(matrix *m, size_t x, size_t y, float v){
-	m->data[(m->width*y)+x] = v;
+	m->data[(MATRIX_WIDTH*y)+x] = v;
 }
 
 void matrix_copy(matrix *dest, float *src){
-	memcpy(dest->data, src, sizeof(float) * (dest->width) * (dest->height));
+	memcpy(dest->data, src, sizeof(float) * MATRIX_SIZE);
 }
 
 void matrix_identity(matrix *dest){
@@ -71,8 +79,7 @@ void matrix_perspective(
 	float fovx, float fovy,
 	float near, float far
 
-){
-	
+){	
 	float fx, fy;
 
 	fx = degrees_to_radians(fovx);
@@ -104,7 +111,8 @@ void matrix_orthographic(
 	matrix_copy(dest, (float[]){
 		1.0f/width, 0.0f,          0.0f,            0.0f,
 		0.0f,       1.0f/height,   0.0f,            0.0f,
-		0.0f,       0.0f,          2.0f/(far-near), -(far+near)/(far-near),
+		0.0f,       0.0f,          2.0f/(far-near), (far+near)/(far-near),
+		//0.0f,       0.0f,          2.0f/(far-near), -(far+near)/(far-near),
 		0.0f,       0.0f,          0.0f,            1.0f
 	});
 }
@@ -163,23 +171,52 @@ void matrix_rotate_z(matrix *dest, float angle){
 	});
 }
 
+
+// Arbitrary axis rotation
+void matrix_rotate(
+	matrix *dest, 
+	float rx, float ry, float rz, 
+	float angle
+){
+	float cosa, sina, a, x, y, z, m;
+	
+	a    = degrees_to_radians(angle);
+	cosa = cosf(a);
+	sina = sinf(a);
+
+	// normalize the rotation axis
+	m = sqrtf((rx * rx) + (ry * ry) + (rz * rz));
+	x = rx / m;
+	y = ry / m;
+	z = rz / m;
+
+	// If the vector is zero don't try to perform the rotation
+	// otherwise you end up with a totally broken transformation.
+	// Multiplying by identity is the equivalent of doing nothing.
+	if( m == 0.0f )
+		matrix_identity(dest);
+	else
+		matrix_copy(dest, (float[]){
+
+		cosa+(x*x)*(1-cosa),   x*y*(1-cosa)-(z*sina), x*z*(1-cosa)+(y*sina), 0.0f,
+		y*x*(1-cosa)+(z*sina), cosa+(y*y)*(1-cosa),   y*z*(1-cosa)-(x*sina), 0.0f,	
+		z*x*(1-cosa)-(y*sina), z*y*(1-cosa)+(x*sina), cosa+(z*z)*(1-cosa),   0.0f,	
+		0.0f,                  0.0f,                  0.0f,                  1.0f	
+			
+		});
+
+}
+
 void matrix_multiply(matrix *dest, matrix *a, matrix *b){
 	size_t x, i, j;
 
 	matrix tmp;
-	matrix_salloc(tmp, 4, 4);
 
-	// The size of the ROWS in matrix A
-	// must be the same as the size of the
-	// COLUMNS in matrix B.
-	if(a->width != b->height)
-		return;
-
-	for(i=0; i < a->height; i++){
-	for(j=0; j < b->width;  j++){
+	for(i=0; i < MATRIX_HEIGHT; i++){
+	for(j=0; j < MATRIX_WIDTH;  j++){
 		float temp = 0;
 
-		for(x=0; x < a->width;  x++)
+		for(x=0; x < MATRIX_WIDTH;  x++)
 			temp += matrix_get(a, x, i) * matrix_get(b, j, x);
 
 		matrix_set(&tmp, j, i, temp);
@@ -187,6 +224,33 @@ void matrix_multiply(matrix *dest, matrix *a, matrix *b){
 	}
 
 	matrix_copy(dest, tmp.data);
+}
+
+
+// position  xyz
+// angle     xyz
+void matrix_camera(
+	matrix *dest,
+	float px, float py, float pz,
+	float ax, float ay, float az
+){
+
+	matrix translate, rotate, temp;
+	
+	matrix_identity(&rotate);
+	
+	// build translation matrix
+	matrix_translate(&translate, -px, -py, -pz);
+	
+	// build rotation matrix
+	// (we don't use arbitrary rotation 
+	// since we need specific values for each axis)
+	matrix_rotate_x(&temp, ax); matrix_multiply(&rotate, &temp, &rotate);
+	matrix_rotate_y(&temp, ay); matrix_multiply(&rotate, &temp, &rotate);
+	matrix_rotate_z(&temp, az); matrix_multiply(&rotate, &temp, &rotate);
+
+	// finnaly calculate the result into our 'destination' matrix
+	matrix_multiply(dest, &rotate, &translate);
 }
 
 void matrix_print(matrix *m, int spacing, int precision){
@@ -197,10 +261,10 @@ void matrix_print(matrix *m, int spacing, int precision){
 	char form[32];
 	sprintf(form, "%%-%d.%df", spacing, precision);
 
-	for(y=0; y < (m->height); y++){
+	for(y=0; y < MATRIX_HEIGHT; y++){
 		printf("%s", "| ");
 		
-		for(x=0; x < (m->width); x++)
+		for(x=0; x < MATRIX_WIDTH; x++)
 			printf(form, matrix_get(m, x, y));
 		
 		printf("%s", "|\n");

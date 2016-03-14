@@ -58,35 +58,22 @@ GLuint init_shape(){
 }
 
 void transform(GLuint program, 
+matrix *camera,
+float sx, float sy, float sz,
 float tx, float ty, float tz,
-float rx, float ry, float rz
+float rx, float ry, float rz, float ra
 ){
 	matrix rotate, translate, scale, perspective, temp;
 	GLuint var;
-
-	// allocate stack memory for matrices
-	matrix_salloc(temp, 4, 4);
-	matrix_salloc(scale, 4, 4);
-	matrix_salloc(rotate, 4, 4);
-	matrix_salloc(translate, 4, 4);
-	matrix_salloc(perspective, 4, 4);
-
+	
 	// calculate
 	matrix_identity(&rotate);
-	
-	matrix_rotate_x(&temp, rx); 
-	matrix_multiply(&rotate, &temp, &rotate);
-	
-	matrix_rotate_y(&temp, ry);
-	matrix_multiply(&rotate, &temp, &rotate);
-	
-	matrix_rotate_z(&temp, rz); 
-	matrix_multiply(&rotate, &temp, &rotate);
-
-	matrix_scale(&scale, 1.0f, 1.0f, 1.0f);
+	matrix_rotate(&rotate, rx, ry, rz, ra);
+	matrix_scale(&scale, sx, sy, sz);
 	matrix_translate(&translate, tx, ty, tz);
+	// choose a perspective
 	//matrix_orthographic(&perspective, 8.0f, 8.0f, 0.1f, 4.0f); // width, height, near far
-	matrix_perspective(&perspective, 90.0f, 90.0f, 0.1f, 4.0f); // fovx, fovy, near far
+	matrix_perspective(&perspective, 130.0f, 130.0f, 0.1f, 100.0f); // fovx, fovy, near far
 
 	// send matrices tp GPU
 	var = glGetUniformLocation(program, "rotate");
@@ -97,6 +84,9 @@ float rx, float ry, float rz
 	glUniformMatrix4fv(var, 1, GL_TRUE,  scale.data);
 	var = glGetUniformLocation(program, "perspective");
 	glUniformMatrix4fv(var, 1, GL_TRUE,  perspective.data);
+
+	var = glGetUniformLocation(program, "camera");
+	glUniformMatrix4fv(var, 1, GL_TRUE,  camera->data);
 }
 
 //glfwSetKeyCallback(window, &keypress);
@@ -106,24 +96,23 @@ int main(int argc, char *argv[]){
 	// dlib initialization
 	
 	GLFWwindow *window =
-	dlib_window(800, 600, "OpenGL Experiment");
+	dlib_window(1920/2, 1080/2, "OpenGL Experiment");
 	
 	dlib_shader_vertex("vertex.glsl");
 	dlib_shader_fragment("fragment.glsl");
 	dlib_compile();
 
 	// Generate a texture
-	GLuint texture = dlib_load_texture("crate.jpg");
+	GLuint crate = dlib_load_texture("crate.jpg");
+	GLuint floor = dlib_load_texture("floor.png");
 
 	// [wireframe mode]
 	//glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 
 	GLuint VAO_RECT = init_shape();
-
 	
 	GLuint program;
 	program = DLIB_PROGRAM;
-
 
 	float time;
 	while(!glfwWindowShouldClose(window)){
@@ -131,24 +120,41 @@ int main(int argc, char *argv[]){
 		glfwPollEvents();
 		
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-		glClearColor(0.2f, 0.2f, 0.2f, 1.0f);
-		glBindTexture(GL_TEXTURE_2D, texture);
+		glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 		glUseProgram(program);
 
 		glBindVertexArray(VAO_RECT);
-		
-		transform(program,
-			-1.0f, 0.0f, -3.0f + cosf(time/100),
-			time/2.0f, time, 0.0f
+
+		matrix camera;
+
+		matrix_camera(&camera,
+			0.0f, 1.0f, 1.0f,
+			30.0f, 0.0f, 0.0f
 		);
+
+		transform(program, &camera,
+			 1.0f, 1.0f, 1.0f,
+			-1.0f, 0.6f, -2.0f,
+			 0.0f, 0.0f, 0.0f, 0.0f
+			 //1.0f, 0.0f, 0.0f, time/10
+		);
+		glBindTexture(GL_TEXTURE_2D, crate);
+		glDrawArrays(GL_TRIANGLES, 0, 36);
 		
+		transform(program, &camera,
+			1.0f, 1.0f, 1.0f,
+			1.0f, 0.6f, -2.0f,
+			0.0f, 0.0f, 0.0f, 0.0f
+		);
+		glBindTexture(GL_TEXTURE_2D, crate);
 		glDrawArrays(GL_TRIANGLES, 0, 36);
 	
-		transform(program,
-			1.0f, 0.0f, -1.0f,
-			time/10.0f, time, 0.0f
+		transform(program, &camera,
+			10.0f, 0.1f, 10.0f,
+			0.0f, 0.0f, 0.0f,
+			0.0f, 0.0f, 0.0f, 0.0f
 		);
-		
+		glBindTexture(GL_TEXTURE_2D, floor);
 		glDrawArrays(GL_TRIANGLES, 0, 36);
 	
 		/*

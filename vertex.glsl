@@ -11,6 +11,8 @@ uniform mat4 translate;
 uniform mat4 rotate;
 uniform mat4 scale;
 
+uniform mat4 camera;
+
 out vec4 frag_color;
 out vec2 frag_texcord;
 
@@ -18,6 +20,7 @@ void main(){
 
 	gl_Position  = 
 		perspective *
+		camera *
 		translate * 
 		rotate * 
 		scale * 
