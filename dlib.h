@@ -19,7 +19,7 @@
 void dlib_shader_vertex(char *filename);
 void dlib_shader_fragment(char *filename);
 void dlib_link_program();
-void dlib_compile();
+GLuint dlib_program();
 GLFWwindow *dlib_window(int width, int height, char *title);
 GLuint dlib_load_texture(char *filename);
 
@@ -53,10 +53,11 @@ void dlib_shader_fragment(char *filename){
 	free(src);
 }
 
-void dlib_compile(){
+GLuint dlib_program(){
 	if(DLIB_VERTEX_SHADER == 0) printf("%s\n", "DLIB : MISSING SHADER : VERTEX");
 	if(DLIB_FRAGMENT_SHADER == 0) printf("%s\n", "DLIB : MISSING SHADER : FRAGMENT");
 	dlib_link_program();
+	return DLIB_PROGRAM;
 }
 
 // compile/check a shader

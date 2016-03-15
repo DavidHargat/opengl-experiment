@@ -1,4 +1,4 @@
-# OpenGL Experiment
+# OpenGL Experiment ( in C )
 
 Messing around with OpenGL, GLFW and GLEW.
 

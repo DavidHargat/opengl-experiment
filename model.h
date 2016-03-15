@@ -1,7 +1,7 @@
 #ifndef MODEL_H
 #define MODEL_H
 
-const GLfloat model_cube[] = {
+const GLfloat MODEL_CUBE[] = {
 	-0.5f, -0.5f, -0.5f,  0.0f, 0.0f,
 	 0.5f, -0.5f, -0.5f,  1.0f, 0.0f,
 	 0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
