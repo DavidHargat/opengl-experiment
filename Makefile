@@ -3,7 +3,7 @@ OBJS=main.o
 
 LIBS=-lGLEW -lglfw3 -lGL -lX11 -lpthread -lXrandr -lXi -ldl -lm -lXxf86vm -lXinerama -lXcursor -lSOIL
 FLAGS=-Wall -I.
-DEPS=readfile.h vertex.glsl fragment.glsl dlib.h matrix.h vec3.h maths.h
+DEPS=readfile.h vertex.glsl fragment.glsl dg.h matrix.h vec3.h maths.h
 
 all: app
 .PHONY: all
