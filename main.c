@@ -1,16 +1,14 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-#define GLEW_STATIC
-#include <GL/glew.h>
+// all opengl related imports happen in dg.h
+#include "dg.h"
 
-#include <GLFW/glfw3.h>
-
-#include "matrix.h"
-#include "dlib.h"
-#include "model.h"
-#include "vec3.h"
+// local vectors and matrices
 #include "maths.h"
+
+// a cube model
+#include "model.h"
 
 /*
  * glfw - window/input manager
@@ -22,172 +20,100 @@ void keypress(GLFWwindow* window, int key, int scancode, int action, int mode){
 	printf("keypress %d %d %d %d\n\n", key, scancode, action, mode);
 }
 
-GLuint init_shape(){
-	GLuint VAO, VBO;
-	
-	// Vertex Buffer Object for our triangle vertices
-	glGenBuffers(1, &VBO);
-	
-	// Vertex Array Object for our Vertex Buffer bindings
-	glGenVertexArrays(1, &VAO);
-
-	glBindVertexArray(VAO);
-	
-	glEnable(GL_DEPTH_TEST);
-	
-	glBindBuffer(GL_ARRAY_BUFFER, VBO);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(MODEL_CUBE), MODEL_CUBE, GL_STATIC_DRAW);
-
-	// position, tex
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(GLfloat), (GLvoid*)(0));
-	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(GLfloat), (GLvoid*)(3*sizeof(GLfloat)));
-	
-	// Vertex Attributes are disabled by default. (enable the 'zeroth' attribute we just bound)
-	glEnableVertexAttribArray(0);
-	glEnableVertexAttribArray(1);
-			
-	glBindVertexArray(0);
-
-	return VAO;
-}
-
-void load_uniform(GLuint program, char *name, GLfloat *data){
-	GLuint var;
-	var = glGetUniformLocation(program, name);
-	glUniformMatrix4fv(var, 1, GL_TRUE, data);
-}
-
-void transform_rotate(GLuint program, float x, float y, float z, float angle){
-	matrix temp;
-	matrix_rotate(&temp, x, y, z, angle);
-	load_uniform(program, "rotate", temp.data);
-}
-
-void transform_translate(GLuint program, float x, float y, float z){
-	matrix temp;
-	matrix_translate(&temp, x, y, z);
-	load_uniform(program, "translate", temp.data);
-}
-
-void transform_scale(GLuint program, float x, float y, float z){
-	matrix temp;
-	matrix_scale(&temp, x, y, z);
-	load_uniform(program, "scale", temp.data);
-}
-
-void transform_perspective(GLuint program, float fovx, float fovy, float near, float far){
-	matrix temp;
-	matrix_perspective(&temp, fovx, fovy, near, far);
-	load_uniform(program, "perspective", temp.data);
-}
-
-void transform_camera(GLuint program, 
-float px, float py, float pz, 
-float rx, float ry, float rz
-){
-	matrix temp;
-	matrix_camera(&temp, px, py, pz, rx, ry, rz);
-	load_uniform(program, "camera", temp.data);
-}
 int main(int argc, char *argv[]){
 	//glfwSetKeyCallback(window, &keypress);
-	// dlib initialization
 	GLFWwindow *window;
-	GLuint VAO_RECT;
+	GLuint VAO, VBO;
 	GLuint program;
-	GLuint crate, wall, floor;
+	GLuint crate;
 
-	window = dlib_window(1920-192, 1080-108, "OpenGL Experiment");
+	matrix camera, perspective, rotate, scale, translate;
+	GLuint l_camera, l_rotate, l_scale, l_translate, l_time, l_perspective;
+	float time;
 	
-	dlib_shader_vertex("vertex.glsl");
-	dlib_shader_fragment("fragment.glsl");
+	// init window
+	window = dg_window(1920-192, 1080-108, "OpenGL Experiment");
 
-	// load textures
-	crate = dlib_load_texture("crate.jpg");
-	wall  = dlib_load_texture("wall.jpg");
-	floor = dlib_load_texture("floor.png");
-
-	VAO_RECT = init_shape();
-	program  = dlib_program();
+	// init shaders
+	dg_program(&program);
+	  dg_attach("vertex.glsl", GL_VERTEX_SHADER);
+	  dg_attach("fragment.glsl", GL_FRAGMENT_SHADER);
+	dg_compile();
 	
-	// [wireframe mode]
-	//glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+	// init texture
+	crate = dg_texture("crate.jpg");
 
-	/*
-	float pos = 0;
-	GLfloat cameraSpeed = 0.05f;
-	if(key == GLFW_KEY_W)
-		cameraPos += cameraSpeed * cameraFront;
-	if(key == GLFW_KEY_S)
-		cameraPos -= cameraSpeed * cameraFront;
-	if(key == GLFW_KEY_A)
-		cameraPos -= glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed;
-	if(key == GLFW_KEY_D)
-		cameraPos += glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed;  
-	*/
+	// init model
+	glGenBuffers(1, &VBO);
+	glGenVertexArrays(1, &VAO);
+	glBindVertexArray(VAO);
+	glEnable(GL_DEPTH_TEST);
+	glBindBuffer(GL_ARRAY_BUFFER, VBO);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(MODEL_CUBE), MODEL_CUBE, GL_STATIC_DRAW);
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(GLfloat), (GLvoid*)(0));
+	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(GLfloat), (GLvoid*)(3*sizeof(GLfloat)));
+	glEnableVertexAttribArray(0);
+	glEnableVertexAttribArray(1);
+	glBindVertexArray(0);
 
-	matrix look;
-	float time, ratio;
-	GLuint var;
+	// locate shader variables
+	l_scale = glGetUniformLocation(program, "scale");
+	l_camera = glGetUniformLocation(program, "camera");
+	l_rotate = glGetUniformLocation(program, "rotate");
+	l_translate = glGetUniformLocation(program, "translate");
+	l_perspective = glGetUniformLocation(program, "perspective");
+	
+	// init matrices
+	matrix_perspective(&perspective, 90.0f, 90.0f, 0.1f, 100.0f);
+	matrix_identity(&rotate);
+	matrix_identity(&scale);
+	matrix_identity(&translate);
+	
+	//glPolygonMode(GL_FRONT_AND_BACK, GL_LINE); // uncomment for wireframe
+
 	while(!glfwWindowShouldClose(window)){
-		time = (float)(glfwGetTime() * 100);
-		
-		var = glGetUniformLocation(program, "time");
-		glUniform1f(var, time);
-	
 		glfwPollEvents();
-		
+		time = (float)(glfwGetTime() * 100);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
-		glUseProgram(program);
-
-		glBindVertexArray(VAO_RECT);
-
-		ratio = 1920.0f/1080.0f; 
-		transform_perspective(program, 90.0f, 90.0f * ratio, 0.1f, 100.0f); // fovx, fovy, near far
-			
-		transform_scale(program, 1.0f, 1.0f, 1.0f);
-		
-		/*
-		transform_camera(program,
-			0.0f + cosf(time/100.0f), 1.0f, 0.5f + sinf(time/100.0f),
-			20.0f, 0.0f, 0.0f
-		);
-		*/
 
 		//eye target up
-		matrix_lookat(&look, 
-			0.1f, 1.0f, 1.0f,
-			1.5f*cosf(time/100.0f), 1.0f + sinf(time/100.0f), -2.0f,
-			//-1.5f, 1.0f, -2.0f,
-			0.0f, 1.0f, 0.0f
-		); load_uniform(program, "camera", look.data);
+		matrix_camera(&camera,
+			// position 
+			0.0f, 0.0f, 0.0f,
+			// angle
+			0.0f, 0.0f, 0.0f
+		);
+		
+		glUseProgram(program);
+		
+		// send to gpu
+		glUniform1f(l_time, time);
+		glUniformMatrix4fv(l_camera, 1, GL_TRUE, camera.data);
+		glUniformMatrix4fv(l_perspective, 1, GL_TRUE, perspective.data);
+		
+		// bind model
+		glBindVertexArray(VAO);
 
-		transform_rotate(program, 0.0f, 0.0f, 0.0f, 0.0f);
-		transform_scale(program, 1.0f, 1.0f, 1.0f);
-		
-		// first cube	
-		transform_translate(program, -1.5f, 0.6f, -2.0f);
-		glBindTexture(GL_TEXTURE_2D, crate);
-		glDrawArrays(GL_TRIANGLES, 0, 36);
-		
-		// second cube
-		transform_translate(program,  1.5f, 0.6f, -2.0f);
-		glBindTexture(GL_TEXTURE_2D, crate);
-		glDrawArrays(GL_TRIANGLES, 0, 36);
-	
-		// floor
-		transform_scale(program, 10.0f, 0.1f, 10.0f);
-		transform_translate(program, 0.0f, 0.0f,  0.0f);
-		glBindTexture(GL_TEXTURE_2D, floor);
-		glDrawArrays(GL_TRIANGLES, 0, 36);
-		
-		// walls
-		transform_scale(program, 9.5f, 10.0f, 9.5f);
-		glBindTexture(GL_TEXTURE_2D, wall);
-		glDrawArrays(GL_TRIANGLES, 0, 36);
-		
+			// calculate transformations
+			matrix_scale(&scale, 1.0f, 1.0f, 1.0f);
+			matrix_rotate_y(&rotate, time);
+			matrix_translate(&translate, 0.0f, 0.0f, -1.0f);
+
+			// send to gpu
+			glUniformMatrix4fv(l_scale, 1, GL_TRUE, scale.data);
+			glUniformMatrix4fv(l_rotate, 1, GL_TRUE, rotate.data);
+			glUniformMatrix4fv(l_translate, 1, GL_TRUE, translate.data);
+				
+			// texture
+			glBindTexture(GL_TEXTURE_2D, crate);
+
+			// draw
+			glDrawArrays(GL_TRIANGLES, 0, 36);
+
+		// unbind model VAO
 		glBindVertexArray(0);
+		
 		glfwSwapBuffers(window);
 	}
 	

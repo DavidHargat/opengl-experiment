@@ -15,6 +15,15 @@
 #define DG_SHADER_MAX 256
 #endif
 
+/*
+ * DG "Dave's GL"
+ * A little micro-library to help with
+ * the following tasks:
+ * - loading shaders
+ * - initializing a window with glfw
+ * - loading textures with SOIL
+ */
+
 static GLuint DG_PROGRAM;
 static GLuint DG_SHADER_STACK[DG_SHADER_MAX];
 static GLuint DG_SHADER_COUNT = 0;
